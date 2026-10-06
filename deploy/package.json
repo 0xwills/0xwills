@@ -1,0 +1,15 @@
+{
+  "name": "0xwills-deploy",
+  "private": true,
+  "type": "module",
+  "description": "Deploys the 0xWills WillModule to the demo testnets at one address.",
+  "scripts": {
+    "wallet": "node wallet.mjs",
+    "deploy": "node deploy.mjs",
+    "bridge": "node bridge.mjs",
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "viem": "^2.57.3"
+  }
+}
