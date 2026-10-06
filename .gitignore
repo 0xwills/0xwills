@@ -1,0 +1,15 @@
+# Foundry
+out/
+cache/
+broadcast/
+
+# Secrets: the deploy key lives here, never commit it
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Local smoke-test output (contains throwaway testnet keys)
+deploy/smoke-results.json
