@@ -59,7 +59,7 @@ contract Review4Test is WillModuleTest {
 
     function _expectConfigRevert(WillModule.Plan memory p, string memory reason) internal {
         (address[] memory s, bytes[] memory g) = _ownerSigs(module.hashPlan(p));
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, reason));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg(reason)));
         module.configure(p, s, g);
     }
 
@@ -580,16 +580,14 @@ contract Review4Test is WillModuleTest {
     }
 
     // ------------------------------------------------------------------
-    // Views: timeUntilOverdue agrees with isOverdue
+    // Views: the isOverdue boundary (v4 dropped timeUntilOverdue for contract size)
     // ------------------------------------------------------------------
     function test_A4_ViewBoundaryConsistent() public {
         _configureBySig(_plan(1, 2, 0));
         vm.warp(T0 + INTERVAL);
         assertFalse(module.isOverdue(planId));
-        assertEq(module.timeUntilOverdue(planId), 1);
         vm.warp(T0 + INTERVAL + 1);
         assertTrue(module.isOverdue(planId));
-        assertEq(module.timeUntilOverdue(planId), 0);
         vm.prank(v1);
         module.confirmDeath(planId);
     }
@@ -597,7 +595,7 @@ contract Review4Test is WillModuleTest {
     function testFuzz_A4_ViewsAgree(uint32 dt) public {
         _configureBySig(_plan(1, 2, 0));
         vm.warp(T0 + dt);
-        assertEq(module.isOverdue(planId), module.timeUntilOverdue(planId) == 0);
+        assertEq(module.isOverdue(planId), uint256(dt) > INTERVAL);
     }
 
     // ------------------------------------------------------------------

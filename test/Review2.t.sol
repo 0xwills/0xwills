@@ -454,7 +454,7 @@ contract Review2Test is WillModuleTest {
     function test_A2_MaxNonceRejected() public {
         WillModule.Plan memory p = _plan(type(uint64).max, 2, 0);
         (address[] memory s, bytes[] memory g) = _sigs(p);
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, "nonce too high"));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg("nonce too high")));
         module.configure(p, s, g);
         // the highest allowed nonce still leaves room to cancel
         _configureBySig(_plan(type(uint64).max - 1, 2, 0));

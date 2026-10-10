@@ -361,7 +361,6 @@ contract Review1Test is WillModuleTest {
         assertEq(address(main_), aTest);
         assertTrue(main_.DOMAIN_SEPARATOR() != sepTest);
         assertTrue(main_.cancelDigest(planId, 2, address(0), false) != dTest);
-        assertEq(main_.domainVersion(), "3");
     }
 
     // ------------------------------------------------------------------

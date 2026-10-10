@@ -181,6 +181,35 @@ contract WillModuleTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+    /// @dev v4 uses numeric InvalidConfig codes (contract size); map the readable reason to its code.
+    function _cfg(string memory r) internal pure returns (uint8) {
+        if (keccak256(bytes(r)) == keccak256("zero minimums")) return 1;
+        if (keccak256(bytes(r)) == keccak256("nonce too high")) return 2;
+        if (keccak256(bytes(r)) == keccak256("chain count")) return 3;
+        if (keccak256(bytes(r)) == keccak256("duplicate chain")) return 4;
+        if (keccak256(bytes(r)) == keccak256("zero safe")) return 5;
+        if (keccak256(bytes(r)) == keccak256("interval too short")) return 6;
+        if (keccak256(bytes(r)) == keccak256("dispute too short")) return 7;
+        if (keccak256(bytes(r)) == keccak256("interval too long")) return 8;
+        if (keccak256(bytes(r)) == keccak256("dispute too long")) return 9;
+        if (keccak256(bytes(r)) == keccak256("fallback without verifiers")) return 10;
+        if (keccak256(bytes(r)) == keccak256("fallback too short")) return 11;
+        if (keccak256(bytes(r)) == keccak256("fallback too long")) return 12;
+        if (keccak256(bytes(r)) == keccak256("heir count")) return 13;
+        if (keccak256(bytes(r)) == keccak256("bad heir")) return 14;
+        if (keccak256(bytes(r)) == keccak256("zero share")) return 15;
+        if (keccak256(bytes(r)) == keccak256("duplicate heir")) return 16;
+        if (keccak256(bytes(r)) == keccak256("shares must sum to 10000 bps")) return 17;
+        if (keccak256(bytes(r)) == keccak256("verifier count")) return 18;
+        if (keccak256(bytes(r)) == keccak256("threshold > verifiers")) return 19;
+        if (keccak256(bytes(r)) == keccak256("bad verifier")) return 20;
+        if (keccak256(bytes(r)) == keccak256("duplicate verifier")) return 21;
+        if (keccak256(bytes(r)) == keccak256("token count")) return 22;
+        if (keccak256(bytes(r)) == keccak256("bad token")) return 23;
+        if (keccak256(bytes(r)) == keccak256("duplicate token")) return 24;
+        revert("unknown reason");
+    }
+
     function _plan(uint64 nonce, uint8 threshold, uint256 cap) internal view returns (WillModule.Plan memory p) {
         p.creator = o1;
         p.salt = SALT;
@@ -407,31 +436,31 @@ contract WillModuleTest is Test {
         WillModule.Plan memory p = _plan(1, 2, CAP);
         p.heirs[1].bps = 3000; // sums to 9000
         (address[] memory s1, bytes[] memory g1) = _ownerSigs(module.hashPlan(p));
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, "shares must sum to 10000 bps"));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg("shares must sum to 10000 bps")));
         module.configure(p, s1, g1);
 
         p = _plan(1, 2, CAP);
         p.verifierThreshold = 4;
         (s1, g1) = _ownerSigs(module.hashPlan(p));
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, "threshold > verifiers"));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg("threshold > verifiers")));
         module.configure(p, s1, g1);
 
         p = _plan(1, 2, CAP);
         p.checkInInterval = 10 minutes;
         (s1, g1) = _ownerSigs(module.hashPlan(p));
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, "interval too short"));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg("interval too short")));
         module.configure(p, s1, g1);
 
         p = _plan(1, 2, CAP);
         p.heirs[1].account = heirA;
         (s1, g1) = _ownerSigs(module.hashPlan(p));
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, "duplicate heir"));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg("duplicate heir")));
         module.configure(p, s1, g1);
 
         p = _plan(1, 2, CAP);
         p.chains[1].chainId = CHAIN_A;
         (s1, g1) = _ownerSigs(module.hashPlan(p));
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, "duplicate chain"));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg("duplicate chain")));
         module.configure(p, s1, g1);
     }
 
@@ -1031,7 +1060,7 @@ contract WillModuleTest is Test {
         WillModule.Plan memory p = _plan(1, 2, CAP);
         p.disputePeriod = type(uint64).max;
         (address[] memory s1, bytes[] memory g1) = _ownerSigs(module.hashPlan(p));
-        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, "dispute too long"));
+        vm.expectRevert(abi.encodeWithSelector(WillModule.InvalidConfig.selector, _cfg("dispute too long")));
         module.configure(p, s1, g1);
     }
 
