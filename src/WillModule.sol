@@ -24,7 +24,7 @@ interface IERC20Balance {
     function balanceOf(address account) external view returns (uint256);
 }
 
-/// @title 0xWills WillModule (v3, multi-chain)
+/// @title 0xWills WillModule (v4, multi-chain)
 /// @notice Non-custodial inheritance for Safe smart accounts — one plan across many EVM chains.
 ///
 /// The same contract is deployed at the same address on every supported chain (CREATE2).
@@ -49,6 +49,11 @@ interface IERC20Balance {
 /// stale plans rejected, running-total payouts with per-asset claims and balance-checked token
 /// transfers, lifecycle paused while the module is disabled, executed plans can be closed,
 /// capped relayer gas price + heir-signed max fee, network-specific EIP-712 domain.
+///
+/// v4 changes: (1) owner-chosen verifier fallback: if verifiers never confirm, anyone may start the
+/// dispute window once the owner has been overdue for `verifierFallback` seconds (0 = off);
+/// (2) acknowledge(): verifiers and heirs can confirm on-chain that their wallet works ("I'm here"),
+/// recorded as lastSeen + an event, so owners know their people can still act.
 contract WillModule is ReentrancyGuard {
     // ------------------------------------------------------------------
     // Types
@@ -86,6 +91,7 @@ contract WillModule is ReentrancyGuard {
         Heir[] heirs;
         address[] verifiers;
         uint8 verifierThreshold; // 0 = purely time-based
+        uint64 verifierFallback; // seconds overdue after which anyone may trigger without verifiers (0 = off)
         ChainConfig[] chains;
     }
 
@@ -101,6 +107,7 @@ contract WillModule is ReentrancyGuard {
         uint64 executedAt;
         uint8 verifierThreshold;
         uint256 relayFeeCap;
+        uint64 verifierFallback; // v4 (kept last so older readers of the layout still work)
     }
 
     // ------------------------------------------------------------------
@@ -109,19 +116,20 @@ contract WillModule is ReentrancyGuard {
 
     address public constant NATIVE = address(0);
     address internal constant SENTINEL_MODULES = address(0x1);
-    uint16 public constant TOTAL_BPS = 10_000;
-    uint256 public constant MAX_HEIRS = 20;
-    uint256 public constant MAX_VERIFIERS = 10;
-    uint256 public constant MAX_TOKENS = 20;
-    uint256 public constant MAX_CHAINS = 16;
+    uint16 internal constant TOTAL_BPS = 10_000;
+    uint256 internal constant MAX_HEIRS = 20;
+    uint256 internal constant MAX_VERIFIERS = 10;
+    uint256 internal constant MAX_TOKENS = 20;
+    uint256 internal constant MAX_CHAINS = 16;
     /// @notice How far in the future a signed timestamp may be (clock skew between chains).
-    uint64 public constant MAX_CLOCK_DRIFT = 15 minutes;
-    uint64 public constant MAX_INTERVAL = 3650 days;
-    uint64 public constant MAX_DISPUTE = 365 days;
+    uint64 internal constant MAX_CLOCK_DRIFT = 15 minutes;
+    uint64 internal constant MAX_INTERVAL = 3650 days;
+    uint64 internal constant MAX_DISPUTE = 365 days;
+    uint64 internal constant MAX_FALLBACK = 3650 days;
     /// @notice Gas not visible to gasleft() (base tx cost + calldata), added to relayer refunds.
     uint256 public constant FEE_GAS_OVERHEAD = 45_000;
     /// @notice Relayer refunds use at most basefee + this tip, whatever gas price the relayer chose.
-    uint256 public constant MAX_PRIORITY_FEE = 2 gwei;
+    uint256 internal constant MAX_PRIORITY_FEE = 2 gwei;
     /// @notice Gas given to a token's balanceOf (bounded, so a hostile token can't eat the claim's gas).
     uint256 internal constant BALANCE_GAS = 100_000;
     /// @notice Gas given to each token transfer (through the Safe), so a hostile token can't eat the claim's gas.
@@ -129,19 +137,19 @@ contract WillModule is ReentrancyGuard {
     /// @notice A claim stops paying further tokens when less than this gas is left (ETH is still paid).
     uint256 internal constant MIN_GAS_PER_ASSET = 400_000;
 
-    bytes32 public constant HEIR_TYPEHASH = keccak256("Heir(address account,uint16 bps)");
-    bytes32 public constant CHAIN_TYPEHASH =
+    bytes32 internal constant HEIR_TYPEHASH = keccak256("Heir(address account,uint16 bps)");
+    bytes32 internal constant CHAIN_TYPEHASH =
         keccak256("ChainConfig(uint256 chainId,address safe,uint256 relayFeeCap,address[] tokens)");
-    bytes32 public constant PLAN_TYPEHASH = keccak256(
-        "Plan(address creator,bytes32 salt,uint64 nonce,uint64 issuedAt,uint64 checkInInterval,uint64 disputePeriod,Heir[] heirs,address[] verifiers,uint8 verifierThreshold,ChainConfig[] chains)"
+    bytes32 internal constant PLAN_TYPEHASH = keccak256(
+        "Plan(address creator,bytes32 salt,uint64 nonce,uint64 issuedAt,uint64 checkInInterval,uint64 disputePeriod,Heir[] heirs,address[] verifiers,uint8 verifierThreshold,uint64 verifierFallback,ChainConfig[] chains)"
         "ChainConfig(uint256 chainId,address safe,uint256 relayFeeCap,address[] tokens)"
         "Heir(address account,uint16 bps)"
     );
-    bytes32 public constant CHECKIN_TYPEHASH = keccak256("CheckIn(bytes32 planId,uint64 signedAt)");
-    bytes32 public constant CONFIRM_TYPEHASH = keccak256("Confirm(bytes32 planId,uint64 nonce,uint64 epoch)");
-    bytes32 public constant CANCEL_TYPEHASH =
+    bytes32 internal constant CHECKIN_TYPEHASH = keccak256("CheckIn(bytes32 planId,uint64 signedAt)");
+    bytes32 internal constant CONFIRM_TYPEHASH = keccak256("Confirm(bytes32 planId,uint64 nonce,uint64 epoch)");
+    bytes32 internal constant CANCEL_TYPEHASH =
         keccak256("Cancel(bytes32 planId,uint64 nonce,address sweepTo,bool disableModule)");
-    bytes32 public constant CLAIM_TYPEHASH =
+    bytes32 internal constant CLAIM_TYPEHASH =
         keccak256("Claim(bytes32 planId,uint256 index,uint256 claimNonce,uint256 maxFee)");
 
     /// @notice EIP-712 domain separator without chainId: signatures are valid on every chain
@@ -167,7 +175,7 @@ contract WillModule is ReentrancyGuard {
     mapping(bytes32 planId => mapping(address verifier => bool)) public isVerifier;
     /// @dev votes are keyed by (nonce, epoch): any check-in or plan update voids old votes.
     mapping(bytes32 planId => mapping(bytes32 voteKey => mapping(address verifier => bool))) public hasConfirmed;
-    mapping(bytes32 planId => mapping(bytes32 voteKey => uint8)) public confirmationCount;
+    mapping(bytes32 planId => mapping(bytes32 voteKey => uint8)) internal confirmationCount;
 
     /// @notice Running payout totals. Heir i is owed bps_i of (Safe balance + everything already paid),
     ///         minus what it already received, so assets arriving after execution are shared too.
@@ -175,6 +183,8 @@ contract WillModule is ReentrancyGuard {
     mapping(bytes32 planId => mapping(uint256 index => mapping(address asset => uint256))) public paid;
     /// @notice Per-heir counter for relayed claims: each relayed claim needs a fresh heir signature.
     mapping(bytes32 planId => mapping(uint256 index => uint256)) public claimNonce;
+    /// @notice Last time a verifier or heir confirmed on-chain that their wallet works (acknowledge()).
+    mapping(bytes32 planId => mapping(address who => uint64)) public lastSeen;
 
     // ------------------------------------------------------------------
     // Events
@@ -195,13 +205,40 @@ contract WillModule is ReentrancyGuard {
     event Swept(bytes32 indexed planId, address indexed asset, address to, uint256 amount, bool ok);
     event SweepSkipped(bytes32 indexed planId, address sweepTo);
     event RelayerPaid(bytes32 indexed planId, address indexed relayer, uint256 amount);
+    event Acknowledged(bytes32 indexed planId, address indexed who, bool asVerifier, bool asHeir, uint64 at);
+    event FallbackTriggered(bytes32 indexed planId, uint8 confirmations);
 
     // ------------------------------------------------------------------
     // Errors
     // ------------------------------------------------------------------
 
     error ModuleNotEnabled();
-    error InvalidConfig(string reason);
+    /// @dev Codes (kept numeric to stay under the 24 KB contract size limit):
+    ///      1 = zero minimums
+    ///      2 = nonce too high
+    ///      3 = chain count
+    ///      4 = duplicate chain
+    ///      5 = zero safe
+    ///      6 = interval too short
+    ///      7 = dispute too short
+    ///      8 = interval too long
+    ///      9 = dispute too long
+    ///      10 = fallback without verifiers
+    ///      11 = fallback too short
+    ///      12 = fallback too long
+    ///      13 = heir count
+    ///      14 = bad heir
+    ///      15 = zero share
+    ///      16 = duplicate heir
+    ///      17 = shares must sum to 10000 bps
+    ///      18 = verifier count
+    ///      19 = threshold > verifiers
+    ///      20 = bad verifier
+    ///      21 = duplicate verifier
+    ///      22 = token count
+    ///      23 = bad token
+    ///      24 = duplicate token
+    error InvalidConfig(uint8 code);
     error WrongStatus(Status actual);
     error NotAuthorized();
     error BadSignature();
@@ -227,7 +264,7 @@ contract WillModule is ReentrancyGuard {
     // ------------------------------------------------------------------
 
     constructor(uint64 _minCheckInInterval, uint64 _minDisputePeriod, bool _isTestnet) {
-        if (_minCheckInInterval == 0 || _minDisputePeriod == 0) revert InvalidConfig("zero minimums");
+        if (_minCheckInInterval == 0 || _minDisputePeriod == 0) revert InvalidConfig(1);
         minCheckInInterval = _minCheckInInterval;
         minDisputePeriod = _minDisputePeriod;
         isTestnet = _isTestnet;
@@ -235,15 +272,10 @@ contract WillModule is ReentrancyGuard {
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,address verifyingContract)"),
                 keccak256("0xWills"),
-                keccak256(bytes(_isTestnet ? "3-testnet" : "3")),
+                keccak256(bytes(_isTestnet ? "4-testnet" : "4")),
                 address(this)
             )
         );
-    }
-
-    /// @notice The EIP-712 domain version wallets must sign with.
-    function domainVersion() external view returns (string memory) {
-        return isTestnet ? "3-testnet" : "3";
     }
 
     // ------------------------------------------------------------------
@@ -280,7 +312,7 @@ contract WillModule is ReentrancyGuard {
         }
         if (plan.nonce <= s.nonce) revert StaleNonce();
         // Leave room for a higher cancel nonce, so every plan can always be cancelled or updated.
-        if (plan.nonce == type(uint64).max) revert InvalidConfig("nonce too high");
+        if (plan.nonce == type(uint64).max) revert InvalidConfig(2);
         if (s.status == Status.Active && s.safe != safe) revert PlanTaken();
         bytes32 existing = planOf[safe];
         if (existing != bytes32(0) && existing != planId) {
@@ -307,6 +339,7 @@ contract WillModule is ReentrancyGuard {
         s.checkInInterval = plan.checkInInterval;
         s.disputePeriod = plan.disputePeriod;
         s.verifierThreshold = plan.verifierThreshold;
+        s.verifierFallback = plan.verifierFallback;
         s.relayFeeCap = cc.relayFeeCap;
         s.triggeredAt = 0;
         planOf[safe] = planId;
@@ -442,16 +475,54 @@ contract WillModule is ReentrancyGuard {
     }
 
     /// @notice Start the dispute window. Anyone may call once overdue and the verifier threshold
-    ///         is met (with threshold 0 the switch is purely time-based).
+    ///         is met (with threshold 0 the switch is purely time-based). If the plan has a verifier
+    ///         fallback and the owner has been overdue for that long, the threshold is not required
+    ///         (e.g. every verifier lost their wallet). The dispute window still applies either way.
     function trigger(bytes32 planId) external nonReentrant {
         uint256 gasStart = gasleft();
         State storage s = _plans[planId];
         if (s.status != Status.Active) revert WrongStatus(s.status);
         _requireModuleEnabled(s.safe);
         if (!isOverdue(planId)) revert NotOverdue();
-        if (confirmationCount[planId][_voteKey(s)] < s.verifierThreshold) revert ThresholdNotMet();
+        uint8 count = confirmationCount[planId][_voteKey(s)];
+        if (count < s.verifierThreshold) {
+            uint64 at = fallbackAt(planId);
+            if (at == 0 || block.timestamp < at) revert ThresholdNotMet();
+            emit FallbackTriggered(planId, count);
+        }
         _trigger(planId, s);
         _payRelayerFromSafe(planId, s, gasStart);
+    }
+
+    /// @notice When the verifier fallback opens (0 = no fallback / no plan / no verifiers needed).
+    function fallbackAt(bytes32 planId) public view returns (uint64) {
+        State storage s = _plans[planId];
+        if (s.status == Status.None || s.verifierFallback == 0 || s.verifierThreshold == 0) return 0;
+        return s.lastCheckIn + s.checkInInterval + s.verifierFallback;
+    }
+
+    // ------------------------------------------------------------------
+    // Acknowledge ("I'm here / my wallet works")
+    // ------------------------------------------------------------------
+
+    /// @notice A verifier or heir confirms that they still control their wallet. Changes nothing in
+    ///         the plan; it only records when they were last seen, so the owner knows they can act.
+    function acknowledge(bytes32 planId) external {
+        State storage s = _plans[planId];
+        if (s.status != Status.Active && s.status != Status.Triggered) revert WrongStatus(s.status);
+        bool asVerifier = isVerifier[planId][msg.sender];
+        bool asHeir;
+        Heir[] storage hs = _heirs[planId];
+        for (uint256 i; i < hs.length; ++i) {
+            if (hs[i].account == msg.sender) {
+                asHeir = true;
+                break;
+            }
+        }
+        if (!asVerifier && !asHeir) revert NotAuthorized();
+        uint64 at = uint64(block.timestamp);
+        lastSeen[planId][msg.sender] = at;
+        emit Acknowledged(planId, msg.sender, asVerifier, asHeir, at);
     }
 
     /// @notice After the dispute window, open claims. Anyone may call.
@@ -604,15 +675,6 @@ contract WillModule is ReentrancyGuard {
         return s.status != Status.None && block.timestamp > uint256(s.lastCheckIn) + s.checkInInterval;
     }
 
-    /// @notice Seconds until the owner is overdue (0 if already overdue or no plan).
-    function timeUntilOverdue(bytes32 planId) external view returns (uint256) {
-        State storage s = _plans[planId];
-        if (s.status == Status.None) return 0;
-        uint256 deadline = uint256(s.lastCheckIn) + s.checkInInterval;
-        // Overdue means block.timestamp > deadline (same rule as isOverdue).
-        return block.timestamp > deadline ? 0 : deadline - block.timestamp + 1;
-    }
-
     function currentConfirmations(bytes32 planId) external view returns (uint8) {
         return confirmationCount[planId][_voteKey(_plans[planId])];
     }
@@ -731,6 +793,7 @@ contract WillModule is ReentrancyGuard {
         s.checkInInterval = 0;
         s.disputePeriod = 0;
         s.verifierThreshold = 0;
+        s.verifierFallback = 0;
         s.relayFeeCap = 0;
 
         bool disabled;
@@ -874,13 +937,13 @@ contract WillModule is ReentrancyGuard {
 
     function _localChain(ChainConfig[] calldata chains) internal view returns (uint256 idx) {
         uint256 n = chains.length;
-        if (n == 0 || n > MAX_CHAINS) revert InvalidConfig("chain count");
+        if (n == 0 || n > MAX_CHAINS) revert InvalidConfig(3);
         bool found;
         for (uint256 i; i < n; ++i) {
             for (uint256 j; j < i; ++j) {
-                if (chains[j].chainId == chains[i].chainId) revert InvalidConfig("duplicate chain");
+                if (chains[j].chainId == chains[i].chainId) revert InvalidConfig(4);
             }
-            if (chains[i].safe == address(0)) revert InvalidConfig("zero safe");
+            if (chains[i].safe == address(0)) revert InvalidConfig(5);
             if (chains[i].chainId == block.chainid) {
                 idx = i;
                 found = true;
@@ -890,54 +953,59 @@ contract WillModule is ReentrancyGuard {
     }
 
     function _validateAndStore(bytes32 planId, Plan calldata plan, ChainConfig calldata cc) internal {
-        if (plan.checkInInterval < minCheckInInterval) revert InvalidConfig("interval too short");
-        if (plan.disputePeriod < minDisputePeriod) revert InvalidConfig("dispute too short");
-        if (plan.checkInInterval > MAX_INTERVAL) revert InvalidConfig("interval too long");
-        if (plan.disputePeriod > MAX_DISPUTE) revert InvalidConfig("dispute too long");
+        if (plan.checkInInterval < minCheckInInterval) revert InvalidConfig(6);
+        if (plan.disputePeriod < minDisputePeriod) revert InvalidConfig(7);
+        if (plan.checkInInterval > MAX_INTERVAL) revert InvalidConfig(8);
+        if (plan.disputePeriod > MAX_DISPUTE) revert InvalidConfig(9);
+        if (plan.verifierFallback != 0) {
+            if (plan.verifierThreshold == 0) revert InvalidConfig(10);
+            if (plan.verifierFallback < minDisputePeriod) revert InvalidConfig(11);
+            if (plan.verifierFallback > MAX_FALLBACK) revert InvalidConfig(12);
+        }
 
         // heirs
         uint256 n = plan.heirs.length;
-        if (n == 0 || n > MAX_HEIRS) revert InvalidConfig("heir count");
+        if (n == 0 || n > MAX_HEIRS) revert InvalidConfig(13);
         delete _heirs[planId];
         uint256 total;
         for (uint256 i; i < n; ++i) {
             Heir calldata h = plan.heirs[i];
             if (h.account == address(0) || h.account == cc.safe || h.account == address(this)) {
-                revert InvalidConfig("bad heir");
+                revert InvalidConfig(14);
             }
-            if (h.bps == 0) revert InvalidConfig("zero share");
+            if (h.bps == 0) revert InvalidConfig(15);
             for (uint256 j; j < i; ++j) {
-                if (plan.heirs[j].account == h.account) revert InvalidConfig("duplicate heir");
+                if (plan.heirs[j].account == h.account) revert InvalidConfig(16);
             }
             total += h.bps;
             _heirs[planId].push(h);
         }
-        if (total != TOTAL_BPS) revert InvalidConfig("shares must sum to 10000 bps");
+        if (total != TOTAL_BPS) revert InvalidConfig(17);
 
         // verifiers
         uint256 vn = plan.verifiers.length;
-        if (vn > MAX_VERIFIERS) revert InvalidConfig("verifier count");
-        if (plan.verifierThreshold > vn) revert InvalidConfig("threshold > verifiers");
+        if (vn > MAX_VERIFIERS) revert InvalidConfig(18);
+        if (plan.verifierThreshold > vn) revert InvalidConfig(19);
         _clearVerifiers(planId);
         for (uint256 i; i < vn; ++i) {
             address v = plan.verifiers[i];
-            if (v == address(0) || v == cc.safe || v == address(this)) revert InvalidConfig("bad verifier");
-            if (isVerifier[planId][v]) revert InvalidConfig("duplicate verifier");
+            if (v == address(0) || v == cc.safe || v == address(this)) revert InvalidConfig(20);
+            if (isVerifier[planId][v]) revert InvalidConfig(21);
             isVerifier[planId][v] = true;
             _verifiers[planId].push(v);
         }
 
         // tokens on this chain
         uint256 tn = cc.tokens.length;
-        if (tn > MAX_TOKENS) revert InvalidConfig("token count");
+        if (tn > MAX_TOKENS) revert InvalidConfig(22);
         delete _tokens[planId];
         for (uint256 i; i < tn; ++i) {
             address t = cc.tokens[i];
             if (t == address(0) || t == cc.safe || t == address(this) || t.code.length == 0) {
-                revert InvalidConfig("bad token");
+                revert InvalidConfig(23);
             }
             for (uint256 j; j < i; ++j) {
-                if (cc.tokens[j] == t) revert InvalidConfig("duplicate token");
+                if (cc.tokens[j] == t) revert InvalidConfig(24);
             }
             _tokens[planId].push(t);
         }
@@ -1026,6 +1094,7 @@ contract WillModule is ReentrancyGuard {
                 keccak256(abi.encodePacked(heirHashes)),
                 keccak256(abi.encodePacked(p.verifiers)),
                 p.verifierThreshold,
+                p.verifierFallback,
                 keccak256(abi.encodePacked(chainHashes))
             )
         );
