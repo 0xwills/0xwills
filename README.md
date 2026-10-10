@@ -123,7 +123,7 @@ claimable(planId, index, asset)    getState(planId)
 
 ### Tests
 
-**164 tests** (443 runs including inherited suites, 512 fuzz runs per fuzz test) against a **real Safe v1.4.1**:
+**164 tests** (444 runs including inherited suites, 512 fuzz runs per fuzz test) against a **real Safe v1.4.1**:
 
 | Suite | What it covers |
 |---|---|
