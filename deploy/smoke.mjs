@@ -4,12 +4,13 @@
 //
 // On each chain, in parallel:
 //   A. Full inheritance: new 1-of-1 Safe (owner = deploy wallet) holding 0.001 ETH -> enable module ->
-//      signed plan (1 heir, 1 verifier, 5 min check-in, 5 min dispute) -> check-in -> signed check-in ->
-//      wait until overdue -> verifier's signed confirmation (relayed) -> wait out the dispute window ->
-//      execute -> heir claims -> heir received the Safe's ETH.
+//      signed plan (1 heir paid in two stages: half at claim, half 5 min later; a note hash; 1 verifier;
+//      5 min check-in, 5 min dispute) -> check-in -> signed check-in -> wait until overdue ->
+//      verifier's signed confirmation (relayed) -> wait out the dispute window -> execute ->
+//      heir claims half -> second half unlocks -> heir claims the rest -> heir received the Safe's ETH.
 //   B. Cancel: second Safe with 0.001 ETH and a plan -> owner cancels with sweep -> ETH back in the
 //      owner's wallet, plan gone, module switched off.
-// Takes about 12 minutes (the contract's testnet minimums are 5 min + 5 min). Costs ~0.003 test ETH per chain,
+// Takes about 17 minutes (the contract's testnet minimums are 5 min + 5 min, plus the 5 min second stage). Costs ~0.003 test ETH per chain,
 // most of which goes to a throwaway heir wallet.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -47,6 +48,8 @@ const FACTORY_ABI = parseAbi([
 ]);
 const STATUS = ['None', 'Active', 'Triggered', 'Executed', 'Closed'];
 const ETH_IN_SAFE = parseEther(process.env.SMOKE_AMOUNT || '0.001');
+const VEST_AFTER = Number(process.env.SMOKE_VEST || 300); // seconds after execution until the second stage unlocks
+const NOTE_HASH = keccak256(toHex('0xwills-smoke-note'));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const owner = loadAccount();
@@ -152,7 +155,9 @@ async function runChain(chain) {
     const plan = {
       creator: owner.address, salt, nonce: 1n, issuedAt: (await now()) - 60n, // a minute back, so the next check-in is strictly later
       checkInInterval: BigInt(art.minCheckInInterval), disputePeriod: BigInt(art.minDisputePeriod),
-      heirs: [{ account: heir, bps: 10000 }], verifiers: [verifier], verifierThreshold: 1,
+      // v5: the heir gets half at claim and half VEST_AFTER seconds after execution; the note hash is any 32 bytes
+      heirs: [{ account: heir, bps: 10000, vestBps: [5000, 5000], vestAfter: [0, VEST_AFTER], noteHash: NOTE_HASH }],
+      verifiers: [verifier], verifierThreshold: 1, verifierFallback: 0n,
       chains: [{ chainId: BigInt(chain.id), safe, relayFeeCap: 0n, tokens: [] }],
     };
     const digest = await read('hashPlan', [plan]);
@@ -174,6 +179,11 @@ async function runChain(chain) {
   let st = await settle(() => read('getState', [planId]), (x) => STATUS[x.status] === 'Active');
   if (STATUS[st.status] !== 'Active') throw new Error(`plan status ${STATUS[st.status]}, expected Active`);
   log(`Safe A ${A.safe} has an active plan`);
+  const [vb, va] = await read('getVesting', [planId, 0n]);
+  const nh = await read('noteHash', [planId, 0n]);
+  if (vb.length !== 2 || Number(vb[1]) !== 5000 || Number(va[1]) !== VEST_AFTER) throw new Error(`schedule not stored: ${JSON.stringify([vb, va], (k, v) => typeof v === 'bigint' ? v.toString() : v)}`);
+  if (nh !== NOTE_HASH) throw new Error('note hash not stored');
+  log('v5 schedule + note hash stored');
 
   const before = st.lastCheckIn;
   await write('check-in (direct)', 'checkIn', [planId]);
@@ -215,7 +225,7 @@ async function runChain(chain) {
   log('revoke OK: the undelivered plan can never be configured here');
 
   // ---- A: overdue -> verifier confirms -> dispute window -> execute -> claim
-  const left = Number(await read('timeUntilOverdue', [planId]));
+  const left = Number(st.lastCheckIn + st.checkInInterval - (await now()));
   log(`owner goes overdue in ~${left}s`);
   await waitUntil('overdue', () => read('isOverdue', [planId]), left + 5);
   st = await read('getState', [planId]);
@@ -227,15 +237,31 @@ async function runChain(chain) {
   log(`triggered; dispute window ends in ~${Number(execAt - (await now()))}s`);
   await waitUntil('dispute window', async () => (await now()) >= execAt, Number(execAt - (await now())) + 5);
   await write('execute', 'execute', [planId]);
-  const owed = await settle(() => read('claimable', [planId, 0n, '0x0000000000000000000000000000000000000000']), (x) => x === ETH_IN_SAFE);
-  if (owed !== ETH_IN_SAFE) throw new Error(`claimable ${fmt(owed)}, expected ${fmt(ETH_IN_SAFE)}`);
+  const ZERO = '0x0000000000000000000000000000000000000000';
+  const HALF = ETH_IN_SAFE / 2n;
+  // v5: only the first stage (half) is claimable right after execution
+  const vested = await settle(() => read('vestedBps', [planId, 0n]), (x) => Number(x) === 5000);
+  if (Number(vested) !== 5000) throw new Error(`vestedBps ${vested}, expected 5000 right after execution`);
+  const owed = await settle(() => read('claimable', [planId, 0n, ZERO]), (x) => x === HALF);
+  if (owed !== HALF) throw new Error(`claimable ${fmt(owed)}, expected ${fmt(HALF)} (first stage)`);
   const heirBefore = await pub.getBalance({ address: heir });
-  await write('heir claims', 'claim', [planId, 0n]);
+  await write('heir claims stage 1', 'claim', [planId, 0n]);
+  const got1 = (await settle(() => pub.getBalance({ address: heir }), (x) => x - heirBefore === HALF)) - heirBefore;
+  if (got1 !== HALF) throw new Error(`heir received ${fmt(got1)} at stage 1, expected ${fmt(HALF)}`);
+  const stillLocked = await read('claimable', [planId, 0n, ZERO]);
+  if (stillLocked !== 0n) throw new Error(`claimable ${fmt(stillLocked)} before the second stage, expected 0`);
+  const unlockAt = await read('nextUnlockAt', [planId, 0n]);
+  log(`stage 1 OK: heir received ${fmt(got1)}; stage 2 unlocks in ~${Number(unlockAt - (await now()))}s`);
+  await waitUntil('second stage', async () => (await now()) >= unlockAt, Number(unlockAt - (await now())) + 5);
+  const owed2 = await settle(() => read('claimable', [planId, 0n, ZERO]), (x) => x === HALF);
+  if (owed2 !== HALF) throw new Error(`claimable ${fmt(owed2)} at stage 2, expected ${fmt(HALF)}`);
+  await write('heir claims stage 2', 'claim', [planId, 0n]);
   const heirGot = (await settle(() => pub.getBalance({ address: heir }), (x) => x - heirBefore === ETH_IN_SAFE)) - heirBefore;
   const safeLeft = await settle(() => pub.getBalance({ address: A.safe }), (x) => x === 0n);
-  if (heirGot !== ETH_IN_SAFE) throw new Error(`heir received ${fmt(heirGot)}, expected ${fmt(ETH_IN_SAFE)}`);
+  if (heirGot !== ETH_IN_SAFE) throw new Error(`heir received ${fmt(heirGot)} in total, expected ${fmt(ETH_IN_SAFE)}`);
   if (safeLeft !== 0n) throw new Error(`Safe A still holds ${fmt(safeLeft)}`);
-  out.inheritance = { safe: A.safe, heir, received: fmt(heirGot) };
+  if ((await read('nextUnlockAt', [planId, 0n])) !== 0n) throw new Error('nextUnlockAt should be 0 once everything unlocked');
+  out.inheritance = { safe: A.safe, heir, received: fmt(heirGot), stages: 2 };
   out.passed = true;
   log(`inheritance OK: heir ${heir} received ${fmt(heirGot)}`);
 }

@@ -1,26 +1,19 @@
-# Deploy & smoke test
+# Deploy WillModule to the demo testnets
 
-Node 18+ scripts (viem) that deploy `WillModule` to **one address on every chain** and run the full inheritance flow end to end.
+Deploys the contract at **one address on all four testnets** (Robinhood Chain testnet, Ethereum Sepolia, Arbitrum Sepolia, Base Sepolia). Needs Node.js 18+ (https://nodejs.org).
 
-```bash
-cd deploy
-npm install
-npm run wallet   # creates a fresh testnet deploy key in ../.env and shows balances + faucets
-npm run bridge   # optional: moves Sepolia ETH to Arbitrum Sepolia + Base Sepolia
-npm run deploy   # CREATE2 deploy on every chain that has test ETH (safe to re-run)
-npm run smoke    # full flow on each chain: Safe → enable → configure → check in → cancel → revoke → confirm → execute → claim
+From the `0xwills` folder in PowerShell:
+
+```powershell
+.\scripts\deploy-testnets.ps1 wallet   # first time: creates the deploy wallet, shows its address and balances
+.\scripts\deploy-testnets.ps1 bridge   # sends Sepolia test ETH to Arbitrum Sepolia + Base Sepolia (0.01 each)
+.\scripts\deploy-testnets.ps1 deploy   # deploys to every chain that has test ETH; safe to re-run
 ```
 
-- Only some chains: `DEPLOY_CHAINS=sepolia,base_sepolia npm run deploy`
-- The key is created locally and stored in `../.env` (git-ignored). **Testnets only.**
-- `deployments.json` records the address and deployment transaction per chain; `testnet-smoke-results.json` lists every transaction of the last live smoke run (throwaway keys removed).
+- The deploy wallet's key is created **on this computer** and saved in `contracts/.env`. It's ignored by git and never uploaded. Use it for testnets only.
+- Each chain needs a little test ETH in the deploy wallet (one deploy costs well under 0.01 test ETH). `wallet` lists a faucet for each chain that's empty.
+- Getting test ETH: Robinhood Chain testnet from the official faucet (https://faucet.testnet.chain.robinhood.com, address only). Sepolia from Google's faucet (Google login) or https://sepolia-faucet.pk910.de (browser mining, no requirements). Then `bridge` moves 0.01 Sepolia ETH each to Arbitrum Sepolia and Base Sepolia through their official bridges (arrives in 10-20 min). Amount: `$env:BRIDGE_AMOUNT="0.02"`.
+- Results go to `contracts/deploy/deployments.json` (the address plus the transaction on each chain).
+- Deploy only some chains: `$env:DEPLOY_CHAINS="sepolia,base_sepolia"; .\scripts\deploy-testnets.ps1 deploy`
 
-## Build
-
-`WillModule.initcode.json` holds the creation code built from `src/WillModule.sol` with solc 0.8.28, `evm_version = cancun`, optimizer 50 runs, constructor args `(minCheckInInterval = 300, minDisputePeriod = 300, isTestnet = true)` and CREATE2 salt `keccak256("0xWills.WillModule.v3")` through the standard deterministic deployer.
-
-Expected address (v4): **`0x8b10886c345E8aA2708e522bc1F8dcbF8460B249`**
-
-Mainnet builds use `isTestnet = false` and longer minimums, which gives a different address and the EIP-712 domain version `4`.
-
-`deployments.v3.json` (`0x3a7dFC0e190C278f6AE0D4B2b37E91F3A015ee7c`) and `deployments.v2.json` (`0xA6B22EB8542C52e3eB2ede5efdcA2DFe20F31862`) are previous versions, kept for reference only. `testnet-smoke-results.json` is from the v3 run.
+The contract bytecode is in `WillModule.initcode.json` (v5: built from `src/WillModule.sol` with solc 0.8.28 via-IR, optimizer 50 runs, minimum interval and dispute window 5 minutes). Expected address: `0x7F0307cF3A5779cdA232003158adfCEc6F410971`. Earlier deployments are kept in `deployments.v2.json`, `deployments.v3.json` and `deployments.v4.json`.

@@ -1,345 +1,365 @@
 {
   "46630": {
     "name": "Robinhood Chain testnet",
-    "module": "0x3a7dFC0e190C278f6AE0D4B2b37E91F3A015ee7c",
+    "module": "0x7F0307cF3A5779cdA232003158adfCEc6F410971",
     "steps": [
       {
         "step": "create Safe A",
-        "tx": "0x674afe76665a7fef201d4ac9cd55a0a66db8f90bb6f9e20496d0a899891392fc"
+        "tx": "0x0bc3dd2880ca9fdd93760bcd050e225d3c52abebb5a1e2276d760faae0843b36"
       },
       {
         "step": "fund Safe A",
-        "tx": "0x7ac824526c35d3ace9e40755b2db73a0a17509ed9c7564f81d2640361b80409e"
+        "tx": "0x5bdcf399059f3a5913f7638e0893b22f7b05d65e61458b2f83303f3a387e9e35"
       },
       {
         "step": "enable module on Safe A",
-        "tx": "0x0c37d58627dad1b88a563872461bdbb59c5ffce8f4c3807e06e51e80c72c54c7"
+        "tx": "0x803cde734724a3ac9a3cef7caa1e214f7e32ba1b1137461650492722e46699ad"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0x5e37c8badd8f8f4e49df8e6bd5817c97431cb15d60edaee6afab50e51e4cdade"
+        "tx": "0x6a506034d996a74b9f33f2161ba5419c0002f59a7f72c2aefffc9f92fbb58015"
       },
       {
         "step": "check-in (direct)",
-        "tx": "0x3ac27d80dcd516356859996c4508ca299924ae4f3b4db4316fa2860923517724"
+        "tx": "0xb78240242647fa01fdbe78e3e0e2f25e2c49b03483db7ad1304980715997ec53"
       },
       {
         "step": "check-in (signed, relayed)",
-        "tx": "0x412a1d3f223272ad2a83935ddee0dd08eddd6c9881a0457ad5f596f0eb77baa3"
+        "tx": "0xd1d3df8c819cf9f92b7e621c6dea584358f42e6ac4d643a9be7b1b48be389bc4"
       },
       {
         "step": "create Safe B",
-        "tx": "0x4b0d79a27584a881eaeb69408c28fae2a9557eab133d5625b3c4401f0ba1329c"
+        "tx": "0x72f5879584aa35857e541ea47a12fc6f3e47a9d8341432dc5950a00854e7a42c"
       },
       {
         "step": "fund Safe B",
-        "tx": "0xb84e93e02388ca79689c4aee352c907c4fab22510178f36ecb7421d5913ea316"
+        "tx": "0x71bb8eda414f928e12207796d941c8f20cc6fadc75b779a4d192b0e09efca5bd"
       },
       {
         "step": "enable module on Safe B",
-        "tx": "0x04852e7dac4bb6655554ac636147cfa562c9e071cec1daebb35a6fd9e30587e8"
+        "tx": "0xf9846c33616f28ae89adef11f1f55c8957256e6c61243c7dcf5b3c048c1c000f"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0xd1fc1b040a10a9a6aec54305cf9b3c39aaf367f5d74f7561c4ca893c932277ae"
+        "tx": "0xb7cf8ae243fd874e36f6e7d4d2a549ba38903f7fff710a906172c43b60ec07b0"
       },
       {
         "step": "cancel plan B (Safe tx, sweep to owner, disable module)",
-        "tx": "0x27d994718a7319adc48ec06790e9f2e9caa6a676b47bf6371698bf0e69a75b69"
+        "tx": "0xee37f733da7d2931f1a49376379237c3d3d3bd2df8dcc27ee5330794669aedc5"
       },
       {
         "step": "revoke a plan that never arrived (creator-signed)",
-        "tx": "0xc078a6aed420bb4252dc06ca87f16a2776a6a20725736fd085fbcc9f3d754545"
+        "tx": "0x17f84f83bf0c3e6de1c410d088c8cf8c8109034149cef4daea7df66abea20551"
       },
       {
         "step": "verifier confirms (signed, relayed)",
-        "tx": "0x470b1a053681eca22465d5b114a83f811ffcfa2966caf77ebebe5a2e4e56f9fb"
+        "tx": "0xece2a35893ef160ccebd66d8186617302745df7fc5fc090f12e7536098309b3d"
       },
       {
         "step": "execute",
-        "tx": "0x9d63e1f35a57c10c8887d5bbf4ab6230ff3104597567d9270631e958e626379c"
+        "tx": "0xf4043ccb99263e77dd2e7be18df1132b16fec4771484cfdf5601b8f2d9b63d6e"
       },
       {
-        "step": "heir claims",
-        "tx": "0x2c44f993e79879ac5990cef3427c24a35051a81bd69a295eeb720d877fff7ff5"
+        "step": "heir claims stage 1",
+        "tx": "0x2c1321508a7ac5195f5463c088c1292f6c8ac126f41a9c67f249646ad2457c19"
+      },
+      {
+        "step": "heir claims stage 2",
+        "tx": "0xb43b9dc60642133180e8f821fdd1dc226179157fb71e9882085c37dc5d5b74bd"
       }
     ],
-    "heir": "0x2b52Fe158593a1E74B4078BAa51a2eA9D37B38f0",
-    "verifier": "0x309405fC806778bB903b8bdcA237c196CcFD690A",
-    "safeA": "0xFFCe392aF6290F47aB28d232c9B3c0Ac569cACC6",
-    "planId": "0x5441cc46b04f94ccd67557853bfaf136eb68b305a8f860aba774f8115cbe87a0",
+    "heir": "0xb4708B225885A7266AB990b8472d1c3Ab095527F",
+    "verifier": "0x441b356e49f0F12DfAe34C079A19Ba3A0A58ee23",
+    "safeA": "0x8F7004c2d940283B8Be5D2d9f5C6dE822a2DdA80",
+    "planId": "0x044631544b9078ca4da935a516d4e60e2ed556196d69fb0aa49b940398215cac",
     "cancel": {
-      "safe": "0x09014d609e0a6663596b4E0adF6eD32dF5463560",
-      "planId": "0x42985d948cbe1534dda7ae3a9f608be567b6c2df1cd51f5d9469ca1011772394",
+      "safe": "0x16b2AfdaFd585DC6268582aAd508C2dEdCbCAa25",
+      "planId": "0xdb5f29405b6d9a281092093b745a5a302010457eb104a15b8386367e311d0706",
       "swept": "0.00100 ETH",
       "moduleDisabled": true
     },
     "revoke": {
-      "planId": "0x742ed76299cb0109b6c1637df539d5f3cbd7ac6e4b298da5ed9e350ca154842c",
+      "planId": "0xd8d42e00ebb1bb3915ba370111a5771647f8dc784d21295e641ea05729476038",
       "nonce": "5"
     },
     "inheritance": {
-      "safe": "0xFFCe392aF6290F47aB28d232c9B3c0Ac569cACC6",
-      "heir": "0x2b52Fe158593a1E74B4078BAa51a2eA9D37B38f0",
-      "received": "0.00100 ETH"
+      "safe": "0x8F7004c2d940283B8Be5D2d9f5C6dE822a2DdA80",
+      "heir": "0xb4708B225885A7266AB990b8472d1c3Ab095527F",
+      "received": "0.00100 ETH",
+      "stages": 2
     },
     "passed": true
   },
   "84532": {
     "name": "Base Sepolia",
-    "module": "0x3a7dFC0e190C278f6AE0D4B2b37E91F3A015ee7c",
+    "module": "0x7F0307cF3A5779cdA232003158adfCEc6F410971",
     "steps": [
       {
         "step": "create Safe A",
-        "tx": "0x4029ba56dd84b2ac5a7cd676b29de8330c6f1d689aad94dc0478259e5488eb61"
+        "tx": "0x869ebe9b8458e4bc5c6dfd12763a5ae6b277641e600b5f09f011698bc84297d4"
       },
       {
         "step": "fund Safe A",
-        "tx": "0x94bc3e9851599692dcb1e3f48418ccd6695f61ed283e5108e88482f1c8c749f1"
+        "tx": "0xd51788747f124664993367e8c90173ef613cb0ef51367e03c3900749ba2ee3fe"
       },
       {
         "step": "enable module on Safe A",
-        "tx": "0x72e0f6d428e8582ef497bdf7b74df73ba1f72cd46e251dbe78cb7ed33c8f8ded"
+        "tx": "0xf9a72c608ea4f275b783bd0a19c2570fe4def402331fa674d2c3ad400f576f3f"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0x62fd7e27bd1baa65d966f1a170bfc9a399d53c53db73cc9256ffdcf6b1a58414"
+        "tx": "0x8c507a3932e051e9b8e1dd7340654e8d33cebdf3325d67cd236520c17b2b7433"
       },
       {
         "step": "check-in (direct)",
-        "tx": "0xc087eb4027aac64ddf1477d852ff6a1e98f9c776060a112b478c649faf3e142d"
+        "tx": "0x5ce20cb41579f98953ad5a4d9e6660ecc1884e7ec49b0c0c30688a3351623647"
       },
       {
         "step": "check-in (signed, relayed)",
-        "tx": "0xb531c4dd48f83544257413f41557d6a0c41b121004aea6e6fa4fa6a9de490af4"
+        "tx": "0xc54cdb09e2c2dcfadf5b9aad8f1ac12f094b3d2648c740eb1e8d223dbba3cb5e"
       },
       {
         "step": "create Safe B",
-        "tx": "0x997f819a794653d83347412707d0a7cd944eefd2ac08f9a8df025143d9ecbb8a"
+        "tx": "0x025ae9b62ab519389fe138330509e2afbee64cdda82a33257f351ffc8343e9dd"
       },
       {
         "step": "fund Safe B",
-        "tx": "0xc08df72cfce581d9ddcfa97dc0d4ed2a3aadc9871bb3bebec8bc1d5f4f552ba1"
+        "tx": "0x0c59117c9eac1b2ef3d3bc8a4e22fbd7f3baa87af76abfbe539d22168c08757c"
       },
       {
         "step": "enable module on Safe B",
-        "tx": "0x3483aac98404d53b76a3d5ffcfc25b08c3b97b0e9931b0d25bb9c7b53a0f90f8"
+        "tx": "0xc90bd99603f549e6208554c0502acefbf0fa40b6fb45ef09a7c76c8e887c8bbc"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0x699ab3eedf598e83fd755114b9f6b44a3accc245602afce16e6b1f0bf6ea6f93"
+        "tx": "0xf62a7c9ba60b0298a6464bb4f6dbfbc132d9823a0cd0ee72d40c958df6cf9e5b"
       },
       {
         "step": "cancel plan B (Safe tx, sweep to owner, disable module)",
-        "tx": "0x36e3b4fcad40e9256d9122170a46e1118f2f579871fb73bdf662dd4d8dad7dab"
+        "tx": "0xa5d71409bd85871d3f7fdd4087d22b6b6af1c2210666a98bbf5bad6075c95fdf"
       },
       {
         "step": "revoke a plan that never arrived (creator-signed)",
-        "tx": "0x5d83ccaf91451d837c6eaaa098e52605dccedbf062334d12b2eb0bbf0b84d093"
+        "tx": "0x13aafc6eabe17f188c59c78bbb9e9d4866e8bba26708bd2a131fe78375be5b46"
       },
       {
         "step": "verifier confirms (signed, relayed)",
-        "tx": "0x7b71c3a9b4561be81cb710158f97b93412fe2ba2c5ae0955f715054c73ad2c3c"
+        "tx": "0xcccf604d774b6707ddc95ce9e0c3a682b532ebc7377dc0bfd35d8047e65babd5"
       },
       {
         "step": "execute",
-        "tx": "0xb2120bc117c9c353e3a4ecb19e6b50dd93d1b6edaa87141240bb2c6162da5691"
+        "tx": "0x691ee1cf9dc4e5f31aa9ca6e007a3e591bd7647f2c947ef8cefc85a1602c2ecf"
       },
       {
-        "step": "heir claims",
-        "tx": "0x3703477092341e307c3d8fdc0c2f59dd2763169ca9272bb2b13dc59391f6e876"
+        "step": "heir claims stage 1",
+        "tx": "0xc51c9c4a26f2f22ddcc91d3643b6bcad693ca79c3318d8e235b79d1ec79ad1d8"
+      },
+      {
+        "step": "heir claims stage 2",
+        "tx": "0xf9f1cca2069d30815ddb52e3b4c97298db5979e09f7ecce1599adcf4ec4802ee"
       }
     ],
-    "heir": "0xbDEB7745c6Cb019fa1a882A5e64da5d1A1E86cFc",
-    "verifier": "0xDB6E79DDaF2eCf09705B48568f3F6E7FbC30da0A",
-    "safeA": "0x688a8Cc16f946CC40383d3e7ce821A14aaB4AB77",
-    "planId": "0x36a3f663b6c5c0046c3064b66122306e3cc40bf01458c3a61c93e3bc1266cc23",
+    "heir": "0xffE3F97c3450CAf40853E7d8D3C9854F4Ad3dd29",
+    "verifier": "0x3105229b2F4b069F639B657F8Ebc5624e214fDF3",
+    "safeA": "0x977410AD658Fb614Aa74cc58F82A051Bf2Ed9534",
+    "planId": "0x0ce0dcc9084f48210c18d2d48ba5b1199e602d03135abf781d0a32fe30c13e3c",
     "cancel": {
-      "safe": "0x4241d609A2e68c930211ca90b1bf8394F7abC7d3",
-      "planId": "0x9bac1c8dbb896e9436fe118b44aa696e9d50eb96b9e2fad6a39df5db8db4d1fa",
+      "safe": "0x85a6BFAc2639dE836C980d892b499db7219208c6",
+      "planId": "0x9c30debb912f97bcaf7790d97511b19b0e7de2038ea48d700fa551bd274d7c9f",
       "swept": "0.00100 ETH",
       "moduleDisabled": true
     },
     "revoke": {
-      "planId": "0xd8c527fa091003bb0998d6cd0496a4423a712437ba443465363d55a1cf2c936e",
+      "planId": "0x0601af147b7b8b622ca301aac495cc569740b1919edb614b0e694dc9fc163d3b",
       "nonce": "5"
     },
     "inheritance": {
-      "safe": "0x688a8Cc16f946CC40383d3e7ce821A14aaB4AB77",
-      "heir": "0xbDEB7745c6Cb019fa1a882A5e64da5d1A1E86cFc",
-      "received": "0.00100 ETH"
+      "safe": "0x977410AD658Fb614Aa74cc58F82A051Bf2Ed9534",
+      "heir": "0xffE3F97c3450CAf40853E7d8D3C9854F4Ad3dd29",
+      "received": "0.00100 ETH",
+      "stages": 2
     },
     "passed": true
   },
   "421614": {
     "name": "Arbitrum Sepolia",
-    "module": "0x3a7dFC0e190C278f6AE0D4B2b37E91F3A015ee7c",
+    "module": "0x7F0307cF3A5779cdA232003158adfCEc6F410971",
     "steps": [
       {
         "step": "create Safe A",
-        "tx": "0x2aa0800d415de4c2e3ca3dd1f9dfda39a2f6642cb47a6c5792390eac993c5062"
+        "tx": "0x5093ae2eabb4d9b24073f547277eac634f2e7562c479b3fb2520ad5e30c328a9"
       },
       {
         "step": "fund Safe A",
-        "tx": "0x65ea7625be38ff1bb4ed46b50ab77d4574969eed903d5545331d14b1e8991f4c"
+        "tx": "0xf03c651daf32ec470d2c8a7eff6fc4beda09e0e105e6da6dc72fee4c9976424c"
       },
       {
         "step": "enable module on Safe A",
-        "tx": "0xc638635b038eac271d297387d9cfeb2bb791cb6eca6f6c697d06aec45092a6f9"
+        "tx": "0xa6db97021534d775a4e558a7db8bd8a48094f24bb5b70899f630afcf61227817"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0xd92bd90f8864b9fe75ac2cae154d9a2931e4604b876053cc240584cbcfb646da"
+        "tx": "0x9073cc71f20a6f107176900ecdd00559ac81bc64ff174c0bf759f3530248a22c"
       },
       {
         "step": "check-in (direct)",
-        "tx": "0x24f4c4213e543c7fbcde64ad12f5007476600b36bdab89af1fa3498c9eaec893"
+        "tx": "0x85b868e111fcebab95477f25a310c48960fe68ede037c960562b5ea4c0ac2e8f"
       },
       {
         "step": "check-in (signed, relayed)",
-        "tx": "0x84b3e33224a60f74cc8b9612631e33f9b497fb2497b3818694b13a139ac92632"
+        "tx": "0xaa3b3cc3e3e387ed285bab12768a7b5d2550e47179ee855a2433327d11a29739"
       },
       {
         "step": "create Safe B",
-        "tx": "0x9363a1344b93e81beb43a8ca9d8fb6a773f947bf835fa7af4441ea2ed0751c43"
+        "tx": "0xde7129ca4b22f6238b7cc6212c0240636fd75ce182bc7f66d9cedeeb7d7daef2"
       },
       {
         "step": "fund Safe B",
-        "tx": "0x30723e9bd836e638805ba87fede9d5ca08dbc211da3daa8cc9e56b5511138a86"
+        "tx": "0x295be176b7eec6bb078af9177e142c6252daa9781894528129a4a313392d3984"
       },
       {
         "step": "enable module on Safe B",
-        "tx": "0xfda6f00338b673709aeb6d789c2820386753109782ef6e4e9c79546908a61d7e"
+        "tx": "0xb9fd133d45f0ed063f3df65aef9383f91718cd007c52c8f63284c10c53522d14"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0xed4c0631c62d336e8c4703d2d277f8fbad4252489e5e325bcc2fed2546c27053"
+        "tx": "0xf9073fab56bd01bd8d0859731d37335414f4ae236f058ccb68f9865a5ba99ec0"
       },
       {
         "step": "cancel plan B (Safe tx, sweep to owner, disable module)",
-        "tx": "0xa15f7460ac8ce0e9f220bd22803c05f6e7f908dd03f0edf5c21b4b2a2a39c28d"
+        "tx": "0x008443276ed4f26aae02cc333e4a967779b718a0d0408f361a2610eb49182af7"
       },
       {
         "step": "revoke a plan that never arrived (creator-signed)",
-        "tx": "0xb2faebbeab118d5d04448223b7669ee0e734179f5209db3da86aebddf474e428"
+        "tx": "0xd7d5a06fb462dd5102d0e0653581ad90e594c6ca8d39583cc648a12217a928e0"
       },
       {
         "step": "verifier confirms (signed, relayed)",
-        "tx": "0x0edce2b6ca40d5b5f734d2487d59ae4bc1131235fb9160a17dbe3837372dafa2"
+        "tx": "0x095f1efb3c85e0efe54ff09c0a1ba70907e1add55b392430e5451a3671a6571d"
       },
       {
         "step": "execute",
-        "tx": "0xb957883301c2d8e1b3eb88c1866239614cec4125681f06b161f79b7255e7b904"
+        "tx": "0x68e1427abe09d67116db946678712eb67838565875b258daaa7b4b3e7da368b2"
       },
       {
-        "step": "heir claims",
-        "tx": "0x549cd82bc7a9fb71d455b8edd6cf4d92b6388d0777f728218e0a0236c4e4536f"
+        "step": "heir claims stage 1",
+        "tx": "0x8406bd98068d33f8b0ef7f95a6efd2d5cef4e50afdb819abfb4f2440db92340f"
+      },
+      {
+        "step": "heir claims stage 2",
+        "tx": "0xab5ef46fe871e5c9396072a075a67d5aa720fa9d6bfc05cb1c6399cc3e38bf08"
       }
     ],
-    "heir": "0x1ca3E9DFCb2153EC1d1184A52e4CA090D7bFc961",
-    "verifier": "0xCa726Ac5b87Af366c8a922018088cEAce7AFd7bc",
-    "safeA": "0xC3bC7e204Ca80ed4F6121626118B48E117f7FD05",
-    "planId": "0x3daa8c1f8d907285e63c430611d476370e1d93085bae64590a6ffe09f6a5ab8a",
+    "heir": "0xEC7DcCbaB126b7DBB44C2734Aa5C3d4De5F589D9",
+    "verifier": "0x5f470fa30CF69E0D0D2A62ebF98411aaa3C5bC46",
+    "safeA": "0x11e55d5CAeF521A66b5010D365BB8b371eA3A4c2",
+    "planId": "0x83d338da317bfb3ac52b97d0b4162cfa4ab44f31b244625b5cb80b181160e250",
     "cancel": {
-      "safe": "0xF3750693C95b48202cc041Ff0aAbf1F38864d358",
-      "planId": "0xac55204316bef206ea1f501274d07d3fa69ab42a0192eb7604097fb6b8a1463a",
+      "safe": "0x05dFf60A52F80559648F289D0520E6D0E37DE27D",
+      "planId": "0x586bec91c8aaf3291ad0cdaf158140cdc66efed3b73e3771dce570adced255ed",
       "swept": "0.00100 ETH",
       "moduleDisabled": true
     },
     "revoke": {
-      "planId": "0x086836e3a61becf1b49f4a311a8b4fbe120b96065555986b1a3b29aea0332956",
+      "planId": "0xfb28f36bf17c1ffaec5278954c46180acec15f6d840df8f3d8d7b830b575eb99",
       "nonce": "5"
     },
     "inheritance": {
-      "safe": "0xC3bC7e204Ca80ed4F6121626118B48E117f7FD05",
-      "heir": "0x1ca3E9DFCb2153EC1d1184A52e4CA090D7bFc961",
-      "received": "0.00100 ETH"
+      "safe": "0x11e55d5CAeF521A66b5010D365BB8b371eA3A4c2",
+      "heir": "0xEC7DcCbaB126b7DBB44C2734Aa5C3d4De5F589D9",
+      "received": "0.00100 ETH",
+      "stages": 2
     },
     "passed": true
   },
   "11155111": {
     "name": "Ethereum Sepolia",
-    "module": "0x3a7dFC0e190C278f6AE0D4B2b37E91F3A015ee7c",
+    "module": "0x7F0307cF3A5779cdA232003158adfCEc6F410971",
     "steps": [
       {
         "step": "create Safe A",
-        "tx": "0x46d278733c78a7eb6e5529a7d45b74ecaee62ee722dd2dd6a714238d3fb5707e"
+        "tx": "0xdc1710feeee6a453dd4dc058dfef5280a8e08304ad97ac3e3543f02c983d8079"
       },
       {
         "step": "fund Safe A",
-        "tx": "0x307fd7ccb0992afce2e61581146917b427e717e0664520bde2f0cf05e21c5274"
+        "tx": "0x1ae6040ceaf85fc5d34b5cf8c3916d995f01f7d185c47afd988bf43cd82c0f0e"
       },
       {
         "step": "enable module on Safe A",
-        "tx": "0x8ba773f87c78193f9600eb94338057e99f398f34fa322392d0aa382ab7992e2d"
+        "tx": "0xa6ee95339fdd0062e4877f6c5fd9552018ab010817a3e68347d1f4e11c023915"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0xd510d5a67f20a5d859eddddc6ab297ae74a74b1fbe935d4bbd66e279338f7087"
+        "tx": "0x1ea2c1029170da2a82fefc595499b73976ca94698528aa3722520608ffb90fb3"
       },
       {
         "step": "check-in (direct)",
-        "tx": "0x3b837ee38011d7f4e7cba1a2d90396b8c4f95a72b864621ae3ec5e1046ca4ed3"
+        "tx": "0x6b507e957a14eb6adc324d2ccb9552fb1ed65d80d760dd1e97add6c4a0c4731c"
       },
       {
         "step": "check-in (signed, relayed)",
-        "tx": "0xe86996538fc58453821b653ee204885325b5b97341857f4e2cbebff4c1f31833"
+        "tx": "0x3c88256ff44aa34cbee317c1ea1dbe43b925962ba78fcd78a36b04a82bc1bfa0"
       },
       {
         "step": "create Safe B",
-        "tx": "0x67f0c39553035348bb1d7412942d475b67de1622622d09a20cbb78680cb0f29c"
+        "tx": "0xf9d80d70a6a5884ce79b1584afa61d4255019c7f719da3041f22bee5009ba39b"
       },
       {
         "step": "fund Safe B",
-        "tx": "0x6db7cf685484afcd470e83c59ef77a9ed919a96b720ac0c371c9a752ac9f999a"
+        "tx": "0xaea71813f5e250ebe6c6c69ababa763750cbed05a3d3c03cbe5da5ba698edb16"
       },
       {
         "step": "enable module on Safe B",
-        "tx": "0xb735b71a02c71abe1369c8d6ca4e7dcdcff4ff18b51d959ae7d797d8be61fb1d"
+        "tx": "0x7bf0f7b92e502d181d2481a480a8a0d9234daafcefccb928372009ab3b7465b8"
       },
       {
         "step": "configure plan (owner-signed)",
-        "tx": "0xdc3030115e9b7ba4a5392e8ffcecabd0785f1ad01eecc2db341e4391f8b35057"
+        "tx": "0xa94d46cfe6e8446a147c63054392466f642f8421722c53107fed427eea349f87"
       },
       {
         "step": "cancel plan B (Safe tx, sweep to owner, disable module)",
-        "tx": "0xb0f6569c826857365c43b4ff777fb9396c9e3783b3cbb7017f6f4a6e79cd01b1"
+        "tx": "0xf4e74447bbf2f2dd8d8736f71820429e3940b055cba18a9fa4df0317123bc48b"
       },
       {
         "step": "revoke a plan that never arrived (creator-signed)",
-        "tx": "0x966048199f9408851af2248d489fd41dc0b2f7c6b751b56bd369589370c9dad9"
+        "tx": "0x0d5e477c52068e9480724f57183edd98a794ffc5727a098d53244bb32ac15dab"
       },
       {
         "step": "verifier confirms (signed, relayed)",
-        "tx": "0x863ef5ea801942a5193be022dca1f0bf0f1a550dbd5b0ba48b39a1af296fbd03"
+        "tx": "0x64bcac1b125e408de11207316fa5e29cc7bd25bbcd1f18bfb251568e1467a4de"
       },
       {
         "step": "execute",
-        "tx": "0x02424730b7790766df2217ebe6fe730021897bf788e06479826f42810c572b6b"
+        "tx": "0x246e1e7d90c34baf12a3decda68c9c133a0c54c860a2850da056946b77e03a1f"
       },
       {
-        "step": "heir claims",
-        "tx": "0x38c56d9216d50341c45476c6591e851d0464be8fc08b83f61a24e71fff1cd211"
+        "step": "heir claims stage 1",
+        "tx": "0x902039874e816bb934dff1566d0a3a178613f60b724ddf8feb088354d47ef347"
+      },
+      {
+        "step": "heir claims stage 2",
+        "tx": "0xac6d410d8ba176df55099c1ba4c299e12a45c39208f91a76362306fcc8467ce3"
       }
     ],
-    "heir": "0xd0cbd4143e18ba60033eb659a8E1C26159cd04B6",
-    "verifier": "0x6aC53530C741b374bC72aA07079010Bb7b54A698",
-    "safeA": "0xb447909C9dDF4708c715aDAF2AB1Bd674d72e089",
-    "planId": "0x06465953a172e59243c53e0114f092f39904bf42785284cedc046e81a78ebbe2",
+    "heir": "0xdE2988b2176A5F2756879CBC1127d610f03aBc35",
+    "verifier": "0x780DACef1329f5F5fc3d50AcEeC21a60c0B940EF",
+    "safeA": "0x181dc0F7f8B719B365c781Bed454Af866F5e6E77",
+    "planId": "0x8d61d8b7993913c5a967582f05768e1e9d34822e44489d4fb66f7bdbce9808e9",
     "cancel": {
-      "safe": "0x07aa595142F3A914b1DBe0C9cE9EF61D42539ED1",
-      "planId": "0x9f1598717a40a56f9b4f21b07d02a35b4f20bbf360486bb4c548af8f070a329c",
+      "safe": "0x0768c5Ee9d1D9be9C0a1774F04156FC461FC7236",
+      "planId": "0x3cdd9579d4bc8727edcf6c6e395c5129ad46c3d904efbf15c83b95f2c6860810",
       "swept": "0.00100 ETH",
       "moduleDisabled": true
     },
     "revoke": {
-      "planId": "0xe9f2cbdbe70534cbae76a8c154eb1529de5895fa4b7e3ed736f57b0612899602",
+      "planId": "0x428e89bafec348c010b98ed7bf3546c9a22c3b8dc30c29f92fed6b2394f5f472",
       "nonce": "5"
     },
     "inheritance": {
-      "safe": "0xb447909C9dDF4708c715aDAF2AB1Bd674d72e089",
-      "heir": "0xd0cbd4143e18ba60033eb659a8E1C26159cd04B6",
-      "received": "0.00100 ETH"
+      "safe": "0x181dc0F7f8B719B365c781Bed454Af866F5e6E77",
+      "heir": "0xdE2988b2176A5F2756879CBC1127d610f03aBc35",
+      "received": "0.00100 ETH",
+      "stages": 2
     },
     "passed": true
   }

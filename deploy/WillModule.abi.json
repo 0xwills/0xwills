@@ -430,7 +430,7 @@
           {
             "name": "heirs",
             "type": "tuple[]",
-            "internalType": "struct WillModule.Heir[]",
+            "internalType": "struct WillModule.HeirConfig[]",
             "components": [
               {
                 "name": "account",
@@ -441,6 +441,21 @@
                 "name": "bps",
                 "type": "uint16",
                 "internalType": "uint16"
+              },
+              {
+                "name": "vestBps",
+                "type": "uint16[]",
+                "internalType": "uint16[]"
+              },
+              {
+                "name": "vestAfter",
+                "type": "uint32[]",
+                "internalType": "uint32[]"
+              },
+              {
+                "name": "noteHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
               }
             ]
           },
@@ -770,6 +785,35 @@
   },
   {
     "type": "function",
+    "name": "getVesting",
+    "inputs": [
+      {
+        "name": "planId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16[]",
+        "internalType": "uint16[]"
+      },
+      {
+        "name": "",
+        "type": "uint32[]",
+        "internalType": "uint32[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "hasConfirmed",
     "inputs": [
       {
@@ -839,7 +883,7 @@
           {
             "name": "heirs",
             "type": "tuple[]",
-            "internalType": "struct WillModule.Heir[]",
+            "internalType": "struct WillModule.HeirConfig[]",
             "components": [
               {
                 "name": "account",
@@ -850,6 +894,21 @@
                 "name": "bps",
                 "type": "uint16",
                 "internalType": "uint16"
+              },
+              {
+                "name": "vestBps",
+                "type": "uint16[]",
+                "internalType": "uint16[]"
+              },
+              {
+                "name": "vestAfter",
+                "type": "uint32[]",
+                "internalType": "uint32[]"
+              },
+              {
+                "name": "noteHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
               }
             ]
           },
@@ -1015,6 +1074,54 @@
   },
   {
     "type": "function",
+    "name": "nextUnlockAt",
+    "inputs": [
+      {
+        "name": "planId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "noteHash",
+    "inputs": [
+      {
+        "name": "planId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "paid",
     "inputs": [
       {
@@ -1159,6 +1266,30 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "vestedBps",
+    "inputs": [
+      {
+        "name": "planId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "event",

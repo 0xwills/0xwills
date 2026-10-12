@@ -1,30 +1,30 @@
 {
   "WillModule": {
-    "address": "0x8b10886c345E8aA2708e522bc1F8dcbF8460B249",
-    "initCodeHash": "0x00a833e63cca3a19138fc97bde3c5ce0677b14a7992f20a4a7d271acecc876bb",
+    "address": "0x7F0307cF3A5779cdA232003158adfCEc6F410971",
+    "initCodeHash": "0xff4b60e96d0ee141d7340b65b9f9b2b88c9badd47b42b838d11bfa853bb5381e",
     "chains": {
       "46630": {
         "name": "Robinhood Chain testnet",
-        "tx": "0x356f77875bbce59131ef4242801457f0ca3d137b75774a139471f79799be73bb",
-        "block": 131890157,
+        "tx": "0x7a58a30a11e6e10d74c510db716746af8d7fb4e27b098cd8f0e04523ccb2cfaf",
+        "block": 133477120,
         "explorer": "https://explorer.testnet.chain.robinhood.com"
       },
       "84532": {
         "name": "Base Sepolia",
-        "tx": "0xe7a808d1dffe02e218b58095c40d909c8623a47220d653462efcba8fc1c4e8f1",
-        "block": 47910025,
+        "tx": "0x38157cfd4f84a5f649ef23716c3e750ebd9188d02e92f300d87f41585438f314",
+        "block": 48010772,
         "explorer": "https://sepolia.basescan.org"
       },
       "421614": {
         "name": "Arbitrum Sepolia",
-        "tx": "0x5f471e13fa6f21d9be53792235dd9952c9d2e7eaae4b1a5cf17824f3c6841491",
-        "block": 317550529,
+        "tx": "0xc3cda6a443fadc58bd849cc40c530fabe8b886fb531502373235b5736df1725a",
+        "block": 318341462,
         "explorer": "https://sepolia.arbiscan.io"
       },
       "11155111": {
         "name": "Ethereum Sepolia",
-        "tx": "0x92673629b793328ae5cd8053dffaec1971e4af881c690ad562d12c16892922c5",
-        "block": 11880626,
+        "tx": "0x669e056383e05072d604ee32d428e0f85f54b6a01fea84ad19ad24b59ed61176",
+        "block": 11897371,
         "explorer": "https://sepolia.etherscan.io"
       }
     }
