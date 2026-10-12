@@ -603,9 +603,9 @@ contract Review4Test is WillModuleTest {
     // ------------------------------------------------------------------
     function test_A4_MaxSizeGas() public {
         WillModule.Plan memory p = _plan(1, 0, CAP);
-        p.heirs = new WillModule.Heir[](20);
+        p.heirs = new WillModule.HeirConfig[](20);
         for (uint256 i; i < 20; ++i) {
-            p.heirs[i] = WillModule.Heir(address(uint160(0xA000 + i)), 500);
+            p.heirs[i] = _hc(address(uint160(0xA000 + i)), 500);
         }
         p.verifiers = new address[](10);
         for (uint256 i; i < 10; ++i) {

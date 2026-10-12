@@ -72,6 +72,10 @@ contract Reenterer {
 }
 
 contract WillModuleTest is Test {
+    function _hc(address a, uint16 b) internal pure returns (WillModule.HeirConfig memory h) {
+        h.account = a;
+        h.bps = b;
+    }
     uint256 constant CHAIN_A = 46630; // Robinhood Chain testnet
     uint256 constant CHAIN_B = 421614; // Arbitrum Sepolia
 
@@ -217,9 +221,9 @@ contract WillModuleTest is Test {
         p.issuedAt = uint64(block.timestamp);
         p.checkInInterval = INTERVAL;
         p.disputePeriod = DISPUTE;
-        p.heirs = new WillModule.Heir[](2);
-        p.heirs[0] = WillModule.Heir({account: heirA, bps: 6000});
-        p.heirs[1] = WillModule.Heir({account: heirB, bps: 4000});
+        p.heirs = new WillModule.HeirConfig[](2);
+        p.heirs[0] = _hc(heirA, 6000);
+        p.heirs[1] = _hc(heirB, 4000);
         p.verifiers = new address[](3);
         p.verifiers[0] = v1;
         p.verifiers[1] = v2;

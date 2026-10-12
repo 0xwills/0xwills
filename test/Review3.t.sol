@@ -284,10 +284,10 @@ contract Review3Test is WillModuleTest {
         RebaseToken r = new RebaseToken();
         r.mint(address(safeA), 1000e18);
         WillModule.Plan memory p = _plan(1, 2, 0);
-        p.heirs = new WillModule.Heir[](3);
-        p.heirs[0] = WillModule.Heir({account: heirA, bps: 5000});
-        p.heirs[1] = WillModule.Heir({account: heirB, bps: 3000});
-        p.heirs[2] = WillModule.Heir({account: heirC, bps: 2000});
+        p.heirs = new WillModule.HeirConfig[](3);
+        p.heirs[0] = _hc(heirA, 5000);
+        p.heirs[1] = _hc(heirB, 3000);
+        p.heirs[2] = _hc(heirC, 2000);
         address[] memory ta = new address[](1);
         ta[0] = address(r);
         p.chains[0].tokens = ta;

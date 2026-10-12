@@ -238,6 +238,11 @@ contract V4Test is WillModuleTest {
 
     function test_V4_FitsTheContractSizeLimit() public view {
         // EIP-170: Ethereum, Arbitrum, Base (and Robinhood Chain) reject runtime code over 24,576 bytes.
-        assertLe(address(module).code.length, 24_576);
+        // v5 is deployed from the via-IR build (profile "ir", out-ir/); the legacy build used by the
+        // tests is larger. Build it first: FOUNDRY_PROFILE=ir forge build --skip test --skip script
+        string memory json = vm.readFile("out-ir/WillModule.sol/WillModule.json");
+        bytes memory code = vm.parseJsonBytes(json, ".deployedBytecode.object");
+        assertLe(code.length, 24_576);
+        assertGt(code.length, 20_000);
     }
 }
