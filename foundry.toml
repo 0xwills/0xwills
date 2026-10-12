@@ -6,11 +6,22 @@ solc_version = "0.8.28"
 evm_version = "cancun"
 optimizer = true
 optimizer_runs = 50
+fs_permissions = [{ access = "read", path = "./out-ir" }]
+
 remappings = [
   "forge-std/=lib/forge-std/src/",
   "openzeppelin-contracts/=lib/openzeppelin-contracts/",
   "safe-smart-account/=lib/safe-smart-account/contracts/",
 ]
+
+# v5: the module is DEPLOYED from the "ir" profile (via-IR, 23.7 KB; the legacy pipeline gives 26.4 KB,
+# over EIP-170). Tests run on the legacy pipeline because the Safe test dependency cannot build via IR.
+# Build/deploy with: FOUNDRY_PROFILE=ir forge build --sizes  /  FOUNDRY_PROFILE=ir forge script ...
+[profile.ir]
+via_ir = true
+out = "out-ir"
+test = "no-tests"
+script = "script"
 
 [fuzz]
 runs = 512

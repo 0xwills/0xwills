@@ -52,19 +52,21 @@ flowchart LR
 | 👋 **"I'm still here"** | Verifiers and heirs can confirm on-chain that their wallet still works, so you know your plan will actually reach them. |
 | 🛑 **Always cancellable** | Until execution you can cancel, sweep everything back to your wallet and switch the module off, by Safe transaction or signature. |
 | 🪙 **ETH + ERC-20s** | Native ETH plus up to 20 tokens per chain, including tokenized stocks on Robinhood Chain. |
+| ⏳ **Staged payouts** | Each heir can be paid in tranches measured from execution (e.g. half at claim, half after six months; up to 12 tranches within five years). Unvested funds stay in the Safe; nobody can accelerate a schedule. |
+| ✉️ **Private heir notes** | A per-heir note encrypted off-chain to the heir's wallet; the contract stores only its hash so the heir can verify it. |
 
 ## Deployments
 
-`WillModule` v4 · **`0x8b10886c345E8aA2708e522bc1F8dcbF8460B249`** (same address on every chain)
+`WillModule` v5 · **`0x7F0307cF3A5779cdA232003158adfCEc6F410971`** (same address on every chain, deployed 2026-10-12)
 
 | Network | Chain ID | Explorer |
 |---|---|---|
-| Robinhood Chain testnet | 46630 | [view](https://explorer.testnet.chain.robinhood.com/address/0x8b10886c345E8aA2708e522bc1F8dcbF8460B249) |
-| Ethereum Sepolia | 11155111 | [view](https://sepolia.etherscan.io/address/0x8b10886c345E8aA2708e522bc1F8dcbF8460B249) |
-| Arbitrum Sepolia | 421614 | [view](https://sepolia.arbiscan.io/address/0x8b10886c345E8aA2708e522bc1F8dcbF8460B249) |
-| Base Sepolia | 84532 | [view](https://sepolia.basescan.org/address/0x8b10886c345E8aA2708e522bc1F8dcbF8460B249) |
+| Robinhood Chain testnet | 46630 | [view](https://explorer.testnet.chain.robinhood.com/address/0x7F0307cF3A5779cdA232003158adfCEc6F410971) |
+| Ethereum Sepolia | 11155111 | [view](https://sepolia.etherscan.io/address/0x7F0307cF3A5779cdA232003158adfCEc6F410971) |
+| Arbitrum Sepolia | 421614 | [view](https://sepolia.arbiscan.io/address/0x7F0307cF3A5779cdA232003158adfCEc6F410971) |
+| Base Sepolia | 84532 | [view](https://sepolia.basescan.org/address/0x7F0307cF3A5779cdA232003158adfCEc6F410971) |
 
-The full end-to-end flow (create Safe → enable module → configure → check in → cancel & sweep → revoke → verifier confirm → execute → heir claim) was run live on all four networks against v3; every transaction is listed in [`deploy/testnet-smoke-results.json`](deploy/testnet-smoke-results.json). Previous deployment: v3 at `0x3a7dFC0e190C278f6AE0D4B2b37E91F3A015ee7c` ([`deploy/deployments.v3.json`](deploy/deployments.v3.json)).
+The full end-to-end flow (create Safe → enable module → configure with a two-stage payout and a note hash → check in → cancel & sweep → revoke → verifier confirm → execute → first-stage claim → second stage unlocks → final claim) was run live on all four networks against v5 on 2026-10-12; every transaction is listed in [`deploy/testnet-smoke-results.json`](deploy/testnet-smoke-results.json). Previous deployments: v4 at `0x8b10886c345E8aA2708e522bc1F8dcbF8460B249` ([`deploy/deployments.v4.json`](deploy/deployments.v4.json)), v3 at `0x3a7dFC0e190C278f6AE0D4B2b37E91F3A015ee7c` ([`deploy/deployments.v3.json`](deploy/deployments.v3.json)).
 
 Mainnet target: **Robinhood Chain**.
 
@@ -109,6 +111,7 @@ cancel(nonce, sweepTo, disable)    cancelBySig(...)    revokeBySig(...)
 claim(planId, index)               claimAssets(planId, index, assets)    claimBySig(...)
 acknowledge(planId)                lastSeen(planId, who)    fallbackAt(planId)
 claimable(planId, index, asset)    getState(planId)
+vestedBps(planId, index)           nextUnlockAt(planId, index)    getVesting(planId, index)    noteHash(planId, index)
 ```
 
 ## Security model
@@ -119,17 +122,19 @@ claimable(planId, index, asset)    getState(planId)
 - **Hostile tokens can't block or double-pay claims:** transfers run with bounded gas and are measured by the Safe's balance change, and every asset is claimed independently.
 - **Relayer fees are capped** per chain and priced at most at `basefee + 2 gwei`. A plain `claim()` never takes a fee, so nobody can skim an heir by front-running.
 - **Paused when switched off:** if the module is disabled in the Safe, the plan pauses and no fees are taken.
-- **Separate testnet and mainnet domains** (`4-testnet` vs `4`), so testnet signatures can never be replayed on mainnet.
+- **Schedules are part of the signed plan** and can't be changed after execution; a claim pays only the vested fraction of the running-total share.
+- **Separate testnet and mainnet domains** (`5-testnet` vs `5`), so testnet signatures can never be replayed on mainnet.
 
 ### Tests
 
-**164 tests** (444 runs including inherited suites, 512 fuzz runs per fuzz test) against a **real Safe v1.4.1**:
+**178 tests** (514 runs including inherited suites, 512 fuzz runs per fuzz test) against a **real Safe v1.4.1**:
 
 | Suite | What it covers |
 |---|---|
 | [`WillModule.t.sol`](test/WillModule.t.sol) | Full lifecycle, multi-chain signatures, fees, cancel/sweep, claims, fuzzing |
 | [`Review1-4.t.sol`](test) | 92 regression tests from internal security review rounds: authorization, signatures, payouts, hostile tokens, gas griefing |
 | [`V4.t.sol`](test/V4.t.sol) | Verifier fallback (config, boundaries, fuzzing), acknowledgements, state layout, EIP-170 size limit |
+| [`V5.t.sol`](test/V5.t.sol) | Staged payouts: schedule validation, 2/5/12 tranches, rounding, timing, relayed claims, fallback execution, reconfiguration, note hashes |
 | [`Digest.t.sol`](test/Digest.t.sol) | EIP-712 digests checked against vectors computed independently with viem (what the app signs) |
 
 ### Known limitations
@@ -147,8 +152,8 @@ Requires [Foundry](https://getfoundry.sh).
 ```bash
 git clone https://github.com/0xwills/0xwills.git && cd 0xwills
 forge install foundry-rs/forge-std@v1.17.0 OpenZeppelin/openzeppelin-contracts@v5.1.0 safe-global/safe-smart-account@v1.4.1
-forge build
-forge test
+forge test                                   # legacy pipeline (the Safe library can't build via-IR)
+FOUNDRY_PROFILE=ir forge build --skip test --skip script   # the deployable, via-IR build (23.7 KB)
 ```
 
 Deploy and smoke-test scripts (Node 18+, viem) live in [`deploy/`](deploy). See [`deploy/README.md`](deploy/README.md).
@@ -156,7 +161,7 @@ Deploy and smoke-test scripts (Node 18+, viem) live in [`deploy/`](deploy). See 
 ## Repository layout
 
 ```
-src/WillModule.sol         the Safe module (v4)
+src/WillModule.sol         the Safe module (v5)
 test/                      Foundry tests (core, review regressions, EIP-712 vectors)
 script/Deploy.s.sol        CREATE2 deployment, same address on every chain
 script/eip712-vectors.mjs  independent EIP-712 vectors (viem)
