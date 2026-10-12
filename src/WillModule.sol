@@ -24,7 +24,7 @@ interface IERC20Balance {
     function balanceOf(address account) external view returns (uint256);
 }
 
-/// @title 0xWills WillModule (v4, multi-chain)
+/// @title 0xWills WillModule (v5, multi-chain)
 /// @notice Non-custodial inheritance for Safe smart accounts — one plan across many EVM chains.
 ///
 /// The same contract is deployed at the same address on every supported chain (CREATE2).
@@ -54,6 +54,12 @@ interface IERC20Balance {
 /// dispute window once the owner has been overdue for `verifierFallback` seconds (0 = off);
 /// (2) acknowledge(): verifiers and heirs can confirm on-chain that their wallet works ("I'm here"),
 /// recorded as lastSeen + an event, so owners know their people can still act.
+///
+/// v5 changes: (1) staged payouts: each heir may carry a vesting schedule (tranches of its share that
+/// unlock at fixed times after execution). A claim pays only the vested part of the running-total share;
+/// the rest stays in the Safe until its tranche unlocks. Nobody can accelerate a schedule.
+/// (2) heir notes: the owner may attach a 32-byte hash per heir (of an off-chain, encrypted note);
+/// the contract stores it so the heir can verify the note is the one the owner signed.
 contract WillModule is ReentrancyGuard {
     // ------------------------------------------------------------------
     // Types
@@ -72,6 +78,23 @@ contract WillModule is ReentrancyGuard {
         uint16 bps;
     }
 
+    /// @notice An heir as signed in the plan (v5): share, optional vesting schedule, optional note hash.
+    ///         vestBps/vestAfter: tranche k = vestBps[k] of this heir's share, claimable once
+    ///         `vestAfter[k]` seconds have passed since execution. Empty = 100% on execution.
+    struct HeirConfig {
+        address account;
+        uint16 bps;
+        uint16[] vestBps; // sums to 10000 when non-empty
+        uint32[] vestAfter; // seconds after executedAt, strictly ascending, first may be 0
+        bytes32 noteHash; // 0 = no note
+    }
+
+    /// @notice A stored vesting schedule (empty = everything on execution).
+    struct Vesting {
+        uint16[] bps;
+        uint32[] after_;
+    }
+
     /// @notice One entry per chain the plan covers.
     struct ChainConfig {
         uint256 chainId;
@@ -88,7 +111,7 @@ contract WillModule is ReentrancyGuard {
         uint64 issuedAt; // counts as a check-in at this time
         uint64 checkInInterval;
         uint64 disputePeriod;
-        Heir[] heirs;
+        HeirConfig[] heirs;
         address[] verifiers;
         uint8 verifierThreshold; // 0 = purely time-based
         uint64 verifierFallback; // seconds overdue after which anyone may trigger without verifiers (0 = off)
@@ -121,6 +144,8 @@ contract WillModule is ReentrancyGuard {
     uint256 internal constant MAX_VERIFIERS = 10;
     uint256 internal constant MAX_TOKENS = 20;
     uint256 internal constant MAX_CHAINS = 16;
+    uint256 internal constant MAX_TRANCHES = 12;
+    uint32 internal constant MAX_VEST = 1825 days; // 5 years after execution
     /// @notice How far in the future a signed timestamp may be (clock skew between chains).
     uint64 internal constant MAX_CLOCK_DRIFT = 15 minutes;
     uint64 internal constant MAX_INTERVAL = 3650 days;
@@ -137,13 +162,14 @@ contract WillModule is ReentrancyGuard {
     /// @notice A claim stops paying further tokens when less than this gas is left (ETH is still paid).
     uint256 internal constant MIN_GAS_PER_ASSET = 400_000;
 
-    bytes32 internal constant HEIR_TYPEHASH = keccak256("Heir(address account,uint16 bps)");
+    bytes32 internal constant HEIR_TYPEHASH =
+        keccak256("Heir(address account,uint16 bps,uint16[] vestBps,uint32[] vestAfter,bytes32 noteHash)");
     bytes32 internal constant CHAIN_TYPEHASH =
         keccak256("ChainConfig(uint256 chainId,address safe,uint256 relayFeeCap,address[] tokens)");
     bytes32 internal constant PLAN_TYPEHASH = keccak256(
         "Plan(address creator,bytes32 salt,uint64 nonce,uint64 issuedAt,uint64 checkInInterval,uint64 disputePeriod,Heir[] heirs,address[] verifiers,uint8 verifierThreshold,uint64 verifierFallback,ChainConfig[] chains)"
         "ChainConfig(uint256 chainId,address safe,uint256 relayFeeCap,address[] tokens)"
-        "Heir(address account,uint16 bps)"
+        "Heir(address account,uint16 bps,uint16[] vestBps,uint32[] vestAfter,bytes32 noteHash)"
     );
     bytes32 internal constant CHECKIN_TYPEHASH = keccak256("CheckIn(bytes32 planId,uint64 signedAt)");
     bytes32 internal constant CONFIRM_TYPEHASH = keccak256("Confirm(bytes32 planId,uint64 nonce,uint64 epoch)");
@@ -185,6 +211,9 @@ contract WillModule is ReentrancyGuard {
     mapping(bytes32 planId => mapping(uint256 index => uint256)) public claimNonce;
     /// @notice Last time a verifier or heir confirmed on-chain that their wallet works (acknowledge()).
     mapping(bytes32 planId => mapping(address who => uint64)) public lastSeen;
+    /// @notice v5: per-heir vesting schedule (empty = all on execution) and note hash (0 = none).
+    mapping(bytes32 planId => mapping(uint256 index => Vesting)) internal _vesting;
+    mapping(bytes32 planId => mapping(uint256 index => bytes32)) public noteHash;
 
     // ------------------------------------------------------------------
     // Events
@@ -238,6 +267,10 @@ contract WillModule is ReentrancyGuard {
     ///      22 = token count
     ///      23 = bad token
     ///      24 = duplicate token
+    ///      25 = vesting arrays mismatch or too many tranches (v5)
+    ///      26 = vesting shares must sum to 10000 bps (v5)
+    ///      27 = vesting times not ascending (v5)
+    ///      28 = vesting beyond 5 years (v5)
     error InvalidConfig(uint8 code);
     error WrongStatus(Status actual);
     error NotAuthorized();
@@ -272,7 +305,7 @@ contract WillModule is ReentrancyGuard {
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,address verifyingContract)"),
                 keccak256("0xWills"),
-                keccak256(bytes(_isTestnet ? "4-testnet" : "4")),
+                keccak256(bytes(_isTestnet ? "5-testnet" : "5")),
                 address(this)
             )
         );
@@ -679,6 +712,40 @@ contract WillModule is ReentrancyGuard {
         return confirmationCount[planId][_voteKey(_plans[planId])];
     }
 
+    /// @notice v5: how much of heir `index`'s share (in bps of the share) has unlocked so far.
+    ///         10000 before any schedule or when no schedule was set.
+    function vestedBps(bytes32 planId, uint256 index) public view returns (uint16) {
+        Vesting storage v = _vesting[planId][index];
+        uint256 k = v.bps.length;
+        if (k == 0) return TOTAL_BPS;
+        State storage s = _plans[planId];
+        if (s.status != Status.Executed) return 0;
+        uint256 elapsed = block.timestamp - s.executedAt;
+        uint256 sum;
+        for (uint256 t; t < k; ++t) {
+            if (v.after_[t] > elapsed) break;
+            sum += v.bps[t];
+        }
+        return uint16(sum);
+    }
+
+    /// @notice v5: when the next tranche of heir `index` unlocks (0 = nothing more to unlock, or not executed).
+    function nextUnlockAt(bytes32 planId, uint256 index) external view returns (uint64) {
+        Vesting storage v = _vesting[planId][index];
+        State storage s = _plans[planId];
+        if (v.bps.length == 0 || s.status != Status.Executed) return 0;
+        uint256 elapsed = block.timestamp - s.executedAt;
+        for (uint256 t; t < v.after_.length; ++t) {
+            if (v.after_[t] > elapsed) return uint64(s.executedAt + v.after_[t]);
+        }
+        return 0;
+    }
+
+    function getVesting(bytes32 planId, uint256 index) external view returns (uint16[] memory, uint32[] memory) {
+        Vesting storage v = _vesting[planId][index];
+        return (v.bps, v.after_);
+    }
+
     /// @notice What heir `index` could claim of `asset` right now (0 unless executed).
     function claimable(bytes32 planId, uint256 index, address asset) external view returns (uint256) {
         State storage s = _plans[planId];
@@ -781,7 +848,7 @@ contract WillModule is ReentrancyGuard {
         }
 
         _clearVerifiers(planId);
-        delete _heirs[planId];
+        _clearHeirs(planId);
         delete _tokens[planId];
         delete planOf[safe];
         // Keep the nonce (and the Safe binding) so old signatures can never be replayed.
@@ -813,6 +880,9 @@ contract WillModule is ReentrancyGuard {
         returns (uint256 due)
     {
         uint256 entitled = (bal + totalPaid[planId][asset]) * bps / TOTAL_BPS;
+        // v5: only the vested part of the share is claimable so far.
+        uint16 vested = vestedBps(planId, index);
+        if (vested != TOTAL_BPS) entitled = entitled * vested / TOTAL_BPS;
         uint256 got = paid[planId][index][asset];
         if (entitled <= got) return 0;
         due = entitled - got;
@@ -966,10 +1036,10 @@ contract WillModule is ReentrancyGuard {
         // heirs
         uint256 n = plan.heirs.length;
         if (n == 0 || n > MAX_HEIRS) revert InvalidConfig(13);
-        delete _heirs[planId];
+        _clearHeirs(planId);
         uint256 total;
         for (uint256 i; i < n; ++i) {
-            Heir calldata h = plan.heirs[i];
+            HeirConfig calldata h = plan.heirs[i];
             if (h.account == address(0) || h.account == cc.safe || h.account == address(this)) {
                 revert InvalidConfig(14);
             }
@@ -978,7 +1048,8 @@ contract WillModule is ReentrancyGuard {
                 if (plan.heirs[j].account == h.account) revert InvalidConfig(16);
             }
             total += h.bps;
-            _heirs[planId].push(h);
+            _heirs[planId].push(Heir(h.account, h.bps));
+            _storeVesting(planId, i, h);
         }
         if (total != TOTAL_BPS) revert InvalidConfig(17);
 
@@ -1009,6 +1080,33 @@ contract WillModule is ReentrancyGuard {
             }
             _tokens[planId].push(t);
         }
+    }
+
+    /// @dev v5: validate and store an heir's vesting schedule and note hash.
+    function _storeVesting(bytes32 planId, uint256 index, HeirConfig calldata h) internal {
+        uint256 k = h.vestBps.length;
+        if (k != h.vestAfter.length || k > MAX_TRANCHES) revert InvalidConfig(25);
+        noteHash[planId][index] = h.noteHash;
+        if (k == 0) return;
+        Vesting storage v = _vesting[planId][index];
+        uint256 sum;
+        for (uint256 t; t < k; ++t) {
+            if (t != 0 && h.vestAfter[t] <= h.vestAfter[t - 1]) revert InvalidConfig(27);
+            sum += h.vestBps[t];
+            v.bps.push(h.vestBps[t]);
+            v.after_.push(h.vestAfter[t]);
+        }
+        if (sum != TOTAL_BPS) revert InvalidConfig(26);
+        if (h.vestAfter[k - 1] > MAX_VEST) revert InvalidConfig(28);
+    }
+
+    /// @dev v5: heirs, their schedules and note hashes go together (an update may shrink the list).
+    function _clearHeirs(bytes32 planId) internal {
+        for (uint256 i = _heirs[planId].length; i > 0; --i) {
+            delete _vesting[planId][i - 1];
+            delete noteHash[planId][i - 1];
+        }
+        delete _heirs[planId];
     }
 
     function _clearVerifiers(bytes32 planId) internal {
@@ -1073,7 +1171,17 @@ contract WillModule is ReentrancyGuard {
     function _hashPlanStruct(Plan calldata p) internal pure returns (bytes32) {
         bytes32[] memory heirHashes = new bytes32[](p.heirs.length);
         for (uint256 i; i < p.heirs.length; ++i) {
-            heirHashes[i] = keccak256(abi.encode(HEIR_TYPEHASH, p.heirs[i].account, p.heirs[i].bps));
+            HeirConfig calldata h = p.heirs[i];
+            heirHashes[i] = keccak256(
+                abi.encode(
+                    HEIR_TYPEHASH,
+                    h.account,
+                    h.bps,
+                    keccak256(abi.encodePacked(h.vestBps)),
+                    keccak256(abi.encodePacked(h.vestAfter)),
+                    h.noteHash
+                )
+            );
         }
         bytes32[] memory chainHashes = new bytes32[](p.chains.length);
         for (uint256 i; i < p.chains.length; ++i) {
